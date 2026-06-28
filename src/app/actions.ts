@@ -1,9 +1,10 @@
 "use server";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000";
+
 export async function processInstagramData(username: string) {
-  // This would connect to your database and process the Instagram data
   console.log("Processing data for:", username);
-  const response = await fetch("http://127.0.0.1:5000/process_data", {
+  const response = await fetch(`${API_BASE_URL}/process_data`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -19,15 +20,14 @@ export async function processInstagramData(username: string) {
   return data;
 }
 
-export async function getChatResponse(message: string, instagramData?: any) {
-  // This would connect to your AI service to get responses
-  // Define the body of the POST request
+export async function getChatResponse(message: string, instagramId?: string) {
   const body = {
     query: message,
+    instagram_id: instagramId,
   };
 
   // Send a POST request
-  const response = await fetch("http://127.0.0.1:5000/process_query", {
+  const response = await fetch(`${API_BASE_URL}/process_query`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

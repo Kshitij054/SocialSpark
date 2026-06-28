@@ -1,7 +1,9 @@
 import os
 import time
 import logging
+# pyrefly: ignore [missing-import]
 import streamlit as st
+# pyrefly: ignore [missing-import]
 from streamlit_chat import message
 from dotenv import load_dotenv
 from services.instagram_service import fetch_data
@@ -31,12 +33,12 @@ def process_data(instagram_id: str):
     except Exception as e:
         raise RuntimeError(f"An error occurred during data upload: {str(e)}") from e
 
-def process_query(query: str):
+def process_query(query: str, instagram_id: str = None):
     if not query or not isinstance(query, str):
         raise ValueError("The query must be a non-empty string.")
 
     try:
-        response = vector_search(query)
+        response = vector_search(query, instagram_id)
         message = response["outputs"][0]["outputs"][0]["results"]["message"]["data"][
             "text"
         ]
@@ -203,7 +205,8 @@ def main():
 
             with st.spinner("Bot is thinking..."):
                 try:
-                    response, extracted_message = process_query(query)
+                    current_id = st.session_state.get('instagram_id', '')
+                    response, extracted_message = process_query(query, current_id)
                     st.session_state.messages.append({"role": "assistant", "content": extracted_message})
                     chat_placeholder.empty()
                     with chat_placeholder.container():

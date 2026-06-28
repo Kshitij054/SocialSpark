@@ -113,11 +113,15 @@ def upload_csv_to_vector_collection(
         documents = []
         for _, row in df.iterrows():
             document = row.to_dict()
+            # Map post_id to Astra's _id field so re-inserting the same post
+            # triggers an upsert (update) instead of creating a duplicate document.
+            document["_id"] = str(document["post_id"])
             document["$vectorize"] = document.pop(vectorize_column)
             document["metadata"] = ast.literal_eval(document["metadata"])
             documents.append(document)
 
         total_inserted = 0
+        total_skipped = 0
         for i in range(0, len(documents), chunk_size):
             chunk = documents[i : i + chunk_size]
             try:
@@ -128,10 +132,19 @@ def upload_csv_to_vector_collection(
                     f"Inserted {chunk_inserted} items in chunk {i // chunk_size + 1}."
                 )
             except Exception as e:
-                logging.error(f"Error inserting chunk {i // chunk_size + 1}: {e}")
+               
+                error_str = str(e).lower()
+                if "duplicate" in error_str or "already exists" in error_str or "_id" in error_str:
+                    logging.warning(
+                        f"Chunk {i // chunk_size + 1}: some posts already exist in DB (skipped duplicates)."
+                    )
+                    total_skipped += len(chunk)
+                else:
+                    logging.error(f"Error inserting chunk {i // chunk_size + 1}: {e}")
 
         logging.info(
-            f"Successfully inserted {total_inserted} items into the collection."
+            f"Successfully inserted {total_inserted} new items. "
+            f"{total_skipped} already existed and were skipped (no duplicates created)."
         )
 
     except ValueError as ve:

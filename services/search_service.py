@@ -6,8 +6,6 @@ the specified query message. The function sends a POST request to the vector sea
 with the input message and returns the JSON response. It also handles errors related to missing 
 environment variables and API request failures.
 
- 
-
 """
 
 import os
@@ -20,11 +18,12 @@ logging.basicConfig(
 )
 
 
-def vector_search(query_message: str) -> dict:
+def vector_search(query_message: str, instagram_id: str = None) -> dict:
     """
     Perform a vector search using the specified query message.
 
     :param query_message: The input message to query the vector search.
+    :param instagram_id: The Instagram user ID to filter by.
     :return: The JSON response from the vector search API.
     :raises RuntimeError: If the environment variables are not properly set or the API request fails.
     """
@@ -46,6 +45,14 @@ def vector_search(query_message: str) -> dict:
             "output_type": "chat",
             "input_type": "chat",
         }
+        
+        if instagram_id:
+            payload["tweaks"] = {
+                "Astra DB": {
+                    "advanced_search_filter": {"username": instagram_id}
+                }
+            }
+
         headers = {
             "Authorization": f"Bearer {application_token}",
             "Content-Type": "application/json",

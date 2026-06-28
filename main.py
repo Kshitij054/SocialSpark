@@ -50,11 +50,12 @@ def process_data(instagram_id: str):
         raise RuntimeError(f"An error occurred during data upload: {str(e)}") from e
 
 
-def process_query(query: str):
+def process_query(query: str, instagram_id: str = None):
     """
     Perform a vector search using the specified query message.
 
     :param query: The input message for the vector search.
+    :param instagram_id: The Instagram user ID to filter by.
     :return: A tuple containing the full JSON response and the extracted answer.
     :raises ValueError: If the query is empty or invalid.
     :raises RuntimeError: If the vector search fails or the response format is invalid.
@@ -63,7 +64,7 @@ def process_query(query: str):
         raise ValueError("The query must be a non-empty string.")
 
     try:
-        response = vector_search(query)
+        response = vector_search(query, instagram_id)
         message = response["outputs"][0]["outputs"][0]["results"]["message"]["data"][
             "text"
         ]
@@ -90,7 +91,7 @@ def main():
 
     try:
         process_data(instagram_id)
-        response, message = process_query(query)
+        response, message = process_query(query, instagram_id)
         print("\n--- Results ---")
         print("Full Response:", response)
         print("Extracted Answer:", message)

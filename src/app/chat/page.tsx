@@ -33,13 +33,18 @@ export default function ChatInterface() {
   const [instagramId, setInstagramId] = useState("");
   const [processing, setProcessing] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  // isDataConnected tracks whether real Instagram data was actually fetched.
+
+  const [isDataConnected, setIsDataConnected] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   const handleInstagramConnect = async () => {
     if (!instagramId) return;
     setProcessing(true);
+    setErrorMessage(""); 
+    const sanitizedId = instagramId.trim().replace(/^@/, "");
     try {
-      const result = await processInstagramData(instagramId);
+      const result = await processInstagramData(sanitizedId);
       setMessages((prev) => [
         ...prev,
         {
@@ -47,17 +52,11 @@ export default function ChatInterface() {
           content: `${result.message} You can now ask specific questions about your content!`,
         },
       ]);
+      setIsDataConnected(true);
       setIsConnected(true);
     } catch (error) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Sorry, there was an error processing your Instagram data.",
-        },
-      ]);
-      setErrorMessage("Failed to process Instagram data. Please try again.");
-      setTimeout(() => setErrorMessage(""), 5000);
+
+      setErrorMessage("Failed to process Instagram data. Please check the handle and try again.");
     }
     setProcessing(false);
   };
@@ -72,7 +71,7 @@ export default function ChatInterface() {
     setLoading(true);
 
     try {
-      const response = await getChatResponse(userMessage);
+      const response = await getChatResponse(userMessage, instagramId);
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: response.response },
@@ -113,7 +112,8 @@ export default function ChatInterface() {
                 <span className="text-xl font-bold">SocialSpark Chat</span>
               </div>
             </div>
-            {isConnected && (
+
+            {isDataConnected && (
               <div className="flex items-center space-x-2 text-sm text-green-400">
                 <CheckCircle className="w-4 h-4" />
                 <span>Social Media Connected</span>
@@ -143,7 +143,15 @@ export default function ChatInterface() {
             <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-8">
               {errorMessage && (
                 <div className="bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg px-4 py-3 mb-6">
-                  {errorMessage}
+                  <p className="mb-2">{errorMessage}</p>
+                  {/* Persistent retry button instead of auto-dismissing toast.
+                     User can clearly see what went wrong and act on it. */}
+                  <button
+                    onClick={() => setErrorMessage("")}
+                    className="text-xs underline text-red-300 hover:text-red-100"
+                  >
+                    Dismiss
+                  </button>
                 </div>
               )}
 
@@ -182,22 +190,7 @@ export default function ChatInterface() {
                   )}
                 </Button>
 
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-slate-700"></div>
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="bg-slate-900 px-4 text-slate-400">or</span>
-                  </div>
-                </div>
 
-                <Button
-                  onClick={() => setIsConnected(true)}
-                  variant="outline"
-                  className="w-full border-slate-700 text-slate-300 hover:bg-slate-800 h-12 text-lg"
-                >
-                  Continue without connecting
-                </Button>
               </div>
 
               <div className="mt-8 p-4 bg-slate-800/50 rounded-xl">

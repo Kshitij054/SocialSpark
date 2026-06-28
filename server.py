@@ -1,6 +1,9 @@
+# pyrefly: ignore [missing-import]
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from dotenv import load_dotenv
 import os
+import re
 import logging
 from services.instagram_service import fetch_data
 from services.db_service import (
@@ -13,6 +16,8 @@ from errors.runtime_error import RuntimeError
 from errors.value_error import ValueError
 
 app = Flask(__name__)
+# Allow requests from the Next.js dev server and production frontend.
+CORS(app, origins=["http://localhost:3000"])
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -41,6 +46,12 @@ def process_data_api():
 
         if not instagram_id:
             return jsonify({"error": "Instagram ID is required."}), 400
+
+        # Validate instagram_id against Instagram's actual username rules.
+        # Only alphanumeric characters, dots, and underscores are allowed, max 30 chars.
+        # This prevents path traversal attacks (e.g. "../../etc") and oversized inputs.
+        if not re.match(r'^[a-zA-Z0-9._]{1,30}$', instagram_id):
+            return jsonify({"error": "Invalid Instagram handle. Use only letters, numbers, dots, and underscores (max 30 chars)."}), 400
 
         collection_name = os.environ.get("ASTRA_DB_COLLECTION_NAME")
         if not collection_name:
@@ -83,11 +94,12 @@ def process_query_api():
     try:
         data = request.json
         query = data.get("query")
+        instagram_id = data.get("instagram_id")
 
         if not query:
             return jsonify({"error": "Query string is required."}), 400
 
-        response = vector_search(query)
+        response = vector_search(query, instagram_id)
         message = response["outputs"][0]["outputs"][0]["results"]["message"]["data"]["text"]
 
         if not message:
@@ -104,6 +116,15 @@ def process_query_api():
     except Exception as e:
         logging.error(str(e))
         return jsonify({"error": "An unexpected error occurred."}), 500
+
+
+@app.route("/health", methods=["GET"])
+def health_check():
+    """
+    Health check endpoint for monitoring and load balancers.
+    Returns a 200 OK if the service is running.
+    """
+    return jsonify({"status": "ok", "service": "SocialSpark API"}), 200
 
 
 if __name__ == "__main__":
